@@ -1,0 +1,106 @@
+host1 -> 10.20.0.1 
+host2 -> 10.20.0.2 
+host3 -> 10.20.0.3 
+host4 -> 10.20.0.4 
+===== 1. REQ-REP: servidor em host1, clientes em host2 =====
+OK  host1(10.20.0.1)/1757                     [host1(10.20.0.1)/1757, 1.19 ms]
+OK  243                                       [host1(10.20.0.1)/1757, 1.54 ms]
+--- cliente ORIGINAL (original/04-22/client1.py) contra o servidor novo:
+Hello world 1*
+--- benchmark mesma máquina (host1 -> host1):
+Benchmark: 1000 pedidos ECHO com 64 bytes de carga
+  RTT   : n=1000  min=0.113  média=0.245  mediana=0.239  p95=0.313  max=3.177 ms
+  Vazão : 3849.6 req/s (sequencial, 1 pedido por vez)
+  Distribuição entre servidores:
+    host1(10.20.0.1)/1757                  1000 (100%)
+--- benchmark máquinas diferentes (host2 -> host1):
+Benchmark: 1000 pedidos ECHO com 64 bytes de carga
+  RTT   : n=1000  min=0.175  média=0.241  mediana=0.239  p95=0.304  max=1.153 ms
+  Vazão : 3886.8 req/s (sequencial, 1 pedido por vez)
+  Distribuição entre servidores:
+    host1(10.20.0.1)/1757                  1000 (100%)
+
+===== 2. REQ-REP com broker em host1 e servidores em host2..host4 =====
+Benchmark: 300 pedidos ECHO com 32 bytes de carga
+  RTT   : n=300  min=0.286  média=0.525  mediana=0.484  p95=0.768  max=3.373 ms
+  Vazão : 1848.0 req/s (sequencial, 1 pedido por vez)
+  Distribuição entre servidores:
+    host2(10.20.0.2)/1798                   100 (33%)
+    host3(10.20.0.3)/1800                   100 (33%)
+    host4(10.20.0.4)/1802                   100 (33%)
+--- derrubando o servidor de host3 e repetindo:
+Benchmark: 300 pedidos ECHO com 32 bytes de carga
+  RTT   : n=300  min=0.381  média=0.459  mediana=0.449  p95=0.550  max=0.911 ms
+  Vazão : 2122.5 req/s (sequencial, 1 pedido por vez)
+  Distribuição entre servidores:
+    host2(10.20.0.2)/1798                   150 (50%)
+    host4(10.20.0.4)/1802                   150 (50%)
+
+===== 3. PUB-SUB: proxy em host1, publicadores em host2 e host3 =====
+Assinante conectado a ['10.20.0.1:5562'], tópicos ['TIME', 'SENSOR']
+
+=== Resumo do assinante (112 mensagens) ===
+  SENSOR recebidas=56    perdidas=0    latência: n=56  min=0.232  média=0.495  mediana=0.438  p95=0.666  max=1.962 ms
+  TIME   recebidas=56    perdidas=0    latência: n=56  min=0.484  média=0.763  mediana=0.722  p95=0.951  max=2.314 ms
+  de host2(10.20.0.2)/1842          56
+  de host3(10.20.0.3)/1844          56
+--- assinante de ALERT em host1:
+ALERT  #5     de host3(10.20.0.3)/1844           0.42 ms  "temperatura 26.04 acima de 26.0"
+
+=== Resumo do assinante (8 mensagens) ===
+  ALERT  recebidas=8     perdidas=0    latência: n=8  min=0.378  média=0.448  mediana=0.452  p95=0.504  max=0.504 ms
+  de host2(10.20.0.2)/1842          3
+  de host3(10.20.0.3)/1844          5
+--- chat entre host2 e host4 via proxy:
+[ana]
+[20:45:42] beto@host4: *** entrou na sala ***   (0.9 ms)
+Sala 'sd' via proxy 10.20.0.1. /sair para sair, /quem para listar.
+[20:45:43] beto@host4: oi ana, aqui é o host4   (0.6 ms)
+[beto]
+Sala 'sd' via proxy 10.20.0.1. /sair para sair, /quem para listar.
+[20:45:42] ana@host2: *** entrou na sala ***   (0.7 ms)
+[20:45:43] ana@host2: oi do host2   (0.6 ms)
+[20:45:44] ana@host2: *** saiu da sala ***   (0.7 ms)
+--- proxy:
+Proxy host1(10.20.0.1)/1836: publicadores -> :5561 | assinantes -> :5562
+[20:45:34] ASSINOU   'ALERT'
+[20:45:34] ASSINOU   'TIME'
+[20:45:34] ASSINOU   'SENSOR'
+[20:45:40] CANCELOU  'ALERT'
+[20:45:40] CANCELOU  'SENSOR'
+[20:45:40] CANCELOU  'TIME'
+[20:45:42] ASSINOU   'CHAT.sd '
+[20:45:42] ASSINOU   'CHAT.sd '
+[20:45:45] CANCELOU  'CHAT.sd '
+
+===== 4. PIPELINE: speedup com 1, 2 e 3 workers (host2..host4) =====
+=== Relatório do lote ===
+Tarefas: 100 de 2 fonte(s) | tempo total 10.53s | vazão 9.5 tarefas/s
+Trabalho somado dos workers: 10.51s  -> paralelismo efetivo 1.00x
+worker                              tarefas    carga   ocupado  por fonte
+host2(10.20.0.2)/1901                   100     1049    10.51s  {'1': 50, '2': 50}
+KILL enviado aos workers.
+Linha acrescentada em /tmp/claude-0/logs/pipeline.csv
+=== Relatório do lote ===
+Tarefas: 100 de 2 fonte(s) | tempo total 5.74s | vazão 17.4 tarefas/s
+Trabalho somado dos workers: 10.51s  -> paralelismo efetivo 1.83x
+worker                              tarefas    carga   ocupado  por fonte
+host2(10.20.0.2)/1984                    50      477     4.78s  {'2': 25, '1': 25}
+host3(10.20.0.3)/1986                    50      572     5.73s  {'2': 25, '1': 25}
+KILL enviado aos workers.
+Linha acrescentada em /tmp/claude-0/logs/pipeline.csv
+=== Relatório do lote ===
+Tarefas: 100 de 2 fonte(s) | tempo total 3.87s | vazão 25.8 tarefas/s
+Trabalho somado dos workers: 10.51s  -> paralelismo efetivo 2.71x
+worker                              tarefas    carga   ocupado  por fonte
+host2(10.20.0.2)/2052                    34      341     3.42s  {'2': 17, '1': 17}
+host3(10.20.0.3)/2054                    33      322     3.23s  {'2': 16, '1': 17}
+host4(10.20.0.4)/2056                    33      386     3.87s  {'2': 17, '1': 16}
+KILL enviado aos workers.
+Linha acrescentada em /tmp/claude-0/logs/pipeline.csv
+--- tabela (CSV):
+rotulo,workers,fontes,tarefas,tempo_s,tarefas_por_s,trabalho_s,paralelismo
+sleep 1 worker(s),1,2,100,10.533,9.49,10.511,1.0
+sleep 2 worker(s),2,2,100,5.74,17.42,10.508,1.83
+sleep 3 worker(s),3,2,100,3.873,25.82,10.507,2.71
+rede simulada removida
