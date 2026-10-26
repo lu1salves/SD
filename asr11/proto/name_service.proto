@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package nameservice;
+
+// Servico de Nomes: permite que servidores registrem (bind) o endereco
+// onde estao escutando sob um nome logico, e que clientes descubram
+// (lookup) esse endereco sem precisar conhece-lo de antemao.
+service NameService {
+  // Registra um nome associado a um endereco. Falha se o nome já existir.
+  rpc Bind(BindRequest) returns (BindReply);
+
+  // Busca o endereco associado a um nome.
+  rpc Lookup(LookupRequest) returns (LookupReply);
+
+  // Remove o registro de um nome.
+  rpc Unbind(UnbindRequest) returns (UnbindReply);
+
+  // Atualiza o endereco associado a um nome ja existente (ou cria, se nao existir).
+  rpc Rebind(RebindRequest) returns (RebindReply);
+}
+
+message BindRequest {
+  string name = 1;     // nome logico do servico, ex: "CalculatorService"
+  string address = 2;  // endereco fisico, ex: "192.168.0.10:50051"
+}
+
+message BindReply {
+  bool success = 1;
+  string message = 2;
+}
+
+message LookupRequest {
+  string name = 1;
+}
+
+message LookupReply {
+  bool found = 1;
+  string address = 2;
+  string message = 3;
+}
+
+message UnbindRequest {
+  string name = 1;
+}
+
+message UnbindReply {
+  bool success = 1;
+  string message = 2;
+}
+
+message RebindRequest {
+  string name = 1;
+  string address = 2;
+}
+
+message RebindReply {
+  bool success = 1;
+  string message = 2;
+}

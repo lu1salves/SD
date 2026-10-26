@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package calculator;
+
+// Primeiro servico de aplicacao: operacoes aritmeticas simples.
+// Roda em um processo/maquina proprio e se registra no Servico de Nomes
+// sob o nome "CalculatorService".
+service Calculator {
+  rpc Soma(TwoNumbersRequest) returns (NumberReply);
+  rpc Subtracao(TwoNumbersRequest) returns (NumberReply);
+}
+
+message TwoNumbersRequest {
+  double a = 1;
+  double b = 2;
+}
+
+message NumberReply {
+  double result = 1;
+}

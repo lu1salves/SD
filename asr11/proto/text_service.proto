@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package textproc;
+
+// Segundo servico de aplicacao: manipulacao de texto.
+// Roda em um processo/maquina proprio, distinto do Calculator, e se
+// registra no Servico de Nomes sob o nome "TextService".
+service TextProcessor {
+  rpc Maiuscula(TextRequest) returns (TextReply);
+  rpc Inverter(TextRequest) returns (TextReply);
+}
+
+message TextRequest {
+  string texto = 1;
+}
+
+message TextReply {
+  string resultado = 1;
+}
